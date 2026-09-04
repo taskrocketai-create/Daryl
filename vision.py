@@ -10,7 +10,18 @@ from openai import OpenAI
 
 import config
 
-_client = OpenAI(api_key=config.OPENAI_API_KEY)
+_client = None
+
+
+def _get_client():
+    """Lazily create the OpenAI client on first real use, not on import.
+    This means importing vision.py (e.g. for tests, or just loading
+    main.py) never requires OPENAI_API_KEY to be set — only actually
+    calling ask_daryl() does."""
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=config.OPENAI_API_KEY)
+    return _client
 
 DARYL_SYSTEM_PROMPT = """You are Daryl, a life-size stuffed rucRak crew-chief \
 character stationed at a Jeep show booth. You have a gruff, funny, \
@@ -77,7 +88,7 @@ def ask_daryl(image_bytes: bytes, mode: str = "greeting") -> str:
     instruction = GREETING_INSTRUCTION if mode == "greeting" else WALKAWAY_INSTRUCTION
     b64 = base64.b64encode(image_bytes).decode("utf-8")
 
-    response = _client.chat.completions.create(
+    response = _get_client().chat.completions.create(
         model="gpt-4o",
         max_tokens=80,
         messages=[
