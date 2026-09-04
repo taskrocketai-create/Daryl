@@ -27,7 +27,7 @@ import main
 
 @pytest.fixture(autouse=True)
 def fresh_state(monkeypatch):
-    """Give every test a clean state object and no-op vision/voice calls."""
+    """Give every test a clean state object and no-op vision/voice/mic calls."""
     new_state = DarylState()
     monkeypatch.setattr(state_module, "state", new_state)
     monkeypatch.setattr(main, "state", new_state)
@@ -36,6 +36,8 @@ def fresh_state(monkeypatch):
     monkeypatch.setattr(main.voice, "speak", lambda text, blocking=True: spoken.append(text))
     monkeypatch.setattr(main.vision, "grab_frame", lambda: b"fake-jpeg-bytes")
     monkeypatch.setattr(main.vision, "ask_daryl", lambda frame, mode: f"[{mode} line]")
+    # never actually touch a real microphone in tests — always report silence
+    monkeypatch.setattr(main.conversation, "listen_for_speech", lambda stop_event: None)
 
     return new_state, spoken
 
@@ -129,3 +131,32 @@ def test_bossman_release_resumes_normal_operation(fresh_state):
     time.sleep(config.DWELL_SECONDS + 0.02)
     main.tick()
     assert any("greeting" in s for s in spoken)
+
+
+def test_greeting_starts_conversation_thread(fresh_state):
+    state, spoken = fresh_state
+    state.update_distance(80)
+    main.tick()
+    time.sleep(config.DWELL_SECONDS + 0.02)
+    main.tick()
+
+    assert state.conversation_stop_event is not None
+    assert state.conversation_thread is not None
+    assert state.conversation_history[0]["role"] == "system"
+    assert state.conversation_history[-1]["role"] == "assistant"
+
+
+def test_walkaway_interrupts_conversation_thread(fresh_state):
+    state, spoken = fresh_state
+    state.update_distance(100)
+    main.tick()
+    time.sleep(config.DWELL_SECONDS + 0.02)
+    main.tick()  # greeting fires, conversation thread starts
+
+    stop_event = state.conversation_stop_event
+    assert stop_event.is_set() is False
+
+    state.update_distance(100 + config.WALKAWAY_DELTA_CM + 5)
+    main.tick()  # walkaway fires
+
+    assert stop_event.is_set() is True

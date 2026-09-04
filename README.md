@@ -102,6 +102,10 @@ behavior, not debugging code that could've been caught for free.
    audio playback).
 6. Copy `.env.example` → `.env`, fill in every value.
 7. `pip install -r requirements.txt`
+   - **Windows:** the `sounddevice` package bundles PortAudio automatically
+     — nothing extra to install.
+   - **Linux:** if you hit `OSError: PortAudio library not found`, run
+     `sudo apt-get install libportaudio2` first, then reinstall.
 
 ## Running it
 
@@ -130,8 +134,36 @@ state in `main.py`'s `tick()`.
   joke line doesn't repeat back-to-back and respects
   `BOSSMAN_LINE_MIN_INTERVAL_SECONDS`.
 
-## Known gaps / things to nail down with Jason
+## Two-way conversation
 
+Daryl doesn't just say one line and go quiet — after the greeting, he opens
+the mic and actually listens. The flow per interaction:
+
+1. Greeting line fires (as before)
+2. `conversation.py` starts listening on the default microphone
+3. When the person stops talking (silence detected), their speech gets
+   transcribed via Whisper and fed to GPT-4o along with the conversation
+   history so far, generating a contextual reply
+4. Daryl speaks the reply, then listens again — repeat
+5. This keeps going until the HC-SR04 detects the person actually walking
+   away, which **interrupts the conversation immediately** (even mid-reply-
+   generation) and hands off to the walkaway line instead
+
+**Tuning note:** `SILENCE_RMS_THRESHOLD` and `SILENCE_DURATION_SECONDS` in
+`.env` control how sensitive the silence detection is — these are starting
+guesses, not calibrated values. Too low a threshold and background booth
+noise never lets Daryl think the person's done talking; too high and he
+never notices they've started. This genuinely needs tuning against a real
+mic in a real noisy environment — simulation mode still uses your actual
+microphone (only distance/BLE/camera are faked), so this is testable now,
+just expect to adjust the numbers once you hear it misfire.
+
+**Known limitation:** if walkaway triggers at the exact moment Daryl is
+mid-way through generating or speaking a reply, there's a small chance of
+audio overlap between the interrupted reply and the walkaway line. Rare in
+practice, but worth knowing it's not fully guarded against.
+
+## Known gaps / things to nail down with Jason
 - Line wording in `lines.py` (stall + Bossman lines) is placeholder —
   swap in Jason's actual voice before the first show.
 - `vision.py`'s `DARYL_SYSTEM_PROMPT` sets tone/persona — worth a pass once

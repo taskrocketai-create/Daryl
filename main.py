@@ -8,11 +8,16 @@ Flow per tick:
   2. If not muted and no conversation active: watch the HC-SR04 distance.
      Once someone holds inside TRIGGER_DISTANCE_CM for DWELL_SECONDS, and
      we're not in cooldown, fire the greeting pipeline.
-  3. If a conversation is active: watch for the walkaway threshold
-     (distance grows WALKAWAY_DELTA_CM past the closest point reached),
-     fire the walkaway pipeline, then enter cooldown.
+  3. Greeting pipeline speaks an opening line, then hands off to a
+     background conversation loop (conversation.py) that listens, replies,
+     listens again — until the person actually walks away.
+  4. If a conversation is active: watch for the walkaway threshold
+     (distance grows WALKAWAY_DELTA_CM past the closest point reached).
+     When it fires, it interrupts the conversation thread, delivers the
+     walkaway line, then enters cooldown.
 """
 import time
+import threading
 
 import config
 from state import state
@@ -21,6 +26,7 @@ import ble_presence
 import webhook_server
 import vision
 import voice
+import conversation
 from lines import STALL_LINES, BOSSMAN_LINES, WALKAWAY_FALLBACK_LINES, get_random_no_repeat
 
 
@@ -44,6 +50,42 @@ def handle_bossman():
     return state.is_muted()
 
 
+def run_conversation_loop(stop_event: threading.Event, history: list):
+    """Runs in a background thread once a greeting has been delivered.
+    Listens -> transcribes -> generates a reply -> speaks -> repeat, until
+    interrupted by stop_event (set when walkaway triggers) or the person
+    just... never says anything and eventually walks off anyway."""
+    while not stop_event.is_set():
+        audio = conversation.listen_for_speech(stop_event)
+        if stop_event.is_set():
+            return
+        if audio is None:
+            time.sleep(0.3)  # brief pause between listen attempts
+            continue
+
+        try:
+            text = conversation.transcribe(audio)
+        except Exception as e:
+            print(f"[conversation] transcription failed: {e}")
+            continue
+        if not text:
+            continue
+
+        print(f"[person says] {text}")
+        history.append({"role": "user", "content": text})
+
+        try:
+            reply = conversation.generate_reply(history)
+        except Exception as e:
+            print(f"[conversation] reply generation failed: {e}")
+            continue
+        history.append({"role": "assistant", "content": reply})
+
+        if stop_event.is_set():
+            return  # walkaway fired while we were generating — don't talk over it
+        voice.speak(reply, blocking=True)
+
+
 def run_greeting_pipeline(distance_cm: float):
     print("[trigger] greeting pipeline firing")
     state.begin_conversation(distance_cm)
@@ -60,9 +102,26 @@ def run_greeting_pipeline(distance_cm: float):
 
     voice.speak(line, blocking=True)
 
+    # hand off to the listening conversation loop
+    history = [
+        {"role": "system", "content": vision.DARYL_SYSTEM_PROMPT},
+        {"role": "assistant", "content": line},
+    ]
+    stop_event = threading.Event()
+    state.conversation_stop_event = stop_event
+    state.conversation_history = history
+    t = threading.Thread(target=run_conversation_loop, args=(stop_event, history), daemon=True)
+    t.start()
+    state.conversation_thread = t
+
 
 def run_walkaway_pipeline():
     print("[trigger] walkaway pipeline firing")
+
+    # interrupt the listening conversation loop, if it's running
+    if getattr(state, "conversation_stop_event", None):
+        state.conversation_stop_event.set()
+
     try:
         frame = vision.grab_frame()
         line = vision.ask_daryl(frame, mode="walkaway")

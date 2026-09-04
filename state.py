@@ -21,6 +21,12 @@ class DarylState:
         self.cooldown_until = 0.0
         self.conversation_active = False
 
+        # Conversation loop (mic listening thread) — set by main.py when a
+        # greeting fires, read/interrupted by main.py's walkaway handling.
+        self.conversation_stop_event = None
+        self.conversation_history = None
+        self.conversation_thread = None
+
         # BLE Bossman
         self.bossman_in_range = False
         self.bossman_last_seen_at = 0.0

@@ -50,3 +50,16 @@ AUDIO_TEMP_DIR = os.getenv("AUDIO_TEMP_DIR", "/tmp/daryl_audio")
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "false").lower() == "true"
 TEST_IMAGE_PATH = os.getenv("TEST_IMAGE_PATH", "test_assets/sample_person.jpg")
 
+# --- Conversation (mic listening, after the greeting line) ---
+# SILENCE_RMS_THRESHOLD is the least "known good" value here — it depends
+# entirely on your actual microphone and booth noise floor. Start with this,
+# then tune after hearing whether Daryl cuts people off mid-sentence
+# (threshold too low / silence duration too short) or waits too long after
+# they're done talking (threshold too high / silence duration too long).
+MIC_SAMPLE_RATE = int(os.getenv("MIC_SAMPLE_RATE", "16000"))
+MIC_CHUNK_MS = int(os.getenv("MIC_CHUNK_MS", "100"))
+SILENCE_RMS_THRESHOLD = float(os.getenv("SILENCE_RMS_THRESHOLD", "500"))
+SILENCE_DURATION_SECONDS = float(os.getenv("SILENCE_DURATION_SECONDS", "1.2"))
+MAX_LISTEN_SECONDS = float(os.getenv("MAX_LISTEN_SECONDS", "8"))
+
+
