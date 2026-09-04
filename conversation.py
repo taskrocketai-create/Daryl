@@ -103,6 +103,16 @@ def listen_for_speech(stop_event):
     return np.concatenate(frames, axis=0)
 
 
+# Bias Whisper toward the vocabulary that actually matters here — without
+# this it's transcribing blind, with no idea "GRUNT" and "GUNNY" are real
+# product names rather than noise/mishearing candidates. Helps most exactly
+# where it's needed most: marginal audio in a loud environment.
+_WHISPER_VOCAB_PROMPT = (
+    "rucRak, GRUNT, GUNNY, Jeep Wrangler, Ford Bronco, cargo rack, "
+    "bike rack, off-road, hitch, fitment, Crew Chief, Daryl, Jason."
+)
+
+
 def transcribe(audio: np.ndarray):
     """Returns transcribed text, or None if this was probably just noise —
     not real speech. Uses Whisper's own no_speech_prob per segment (its
@@ -114,7 +124,8 @@ def transcribe(audio: np.ndarray):
     buf.name = "speech.wav"
 
     result = _get_client().audio.transcriptions.create(
-        model="whisper-1", file=buf, response_format="verbose_json"
+        model="whisper-1", file=buf, response_format="verbose_json",
+        prompt=_WHISPER_VOCAB_PROMPT,
     )
 
     segments = getattr(result, "segments", None) or []

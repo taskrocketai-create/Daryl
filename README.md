@@ -181,6 +181,18 @@ mid-sentence — so there's no risk of him hearing and reacting to his own
 voice through the booth speaker. Listening only starts after he's done
 talking, by construction.
 
+**Since automatic listening was chosen over push-to-talk,** the noise-floor
+calibration and mic hardware choice above aren't optional nice-to-haves —
+there's no button acting as a fallback if noise handling falls short, so
+get both right before relying on this at a real show.
+
+**Whisper vocabulary priming:** `transcribe()` passes a short prompt
+biasing Whisper toward rucRak-specific vocabulary (GRUNT, GUNNY, Bronco,
+Wrangler, fitment, etc.) — helps most in marginal/noisy audio, where a
+mumbled or noise-obscured word could otherwise go either way. Update
+`_WHISPER_VOCAB_PROMPT` in `conversation.py` if new product terms come up
+that Daryl keeps mishearing.
+
 **Known limitation:** if walkaway triggers at the exact moment Daryl is
 mid-way through generating or speaking a reply, there's a small chance of
 audio overlap between the interrupted reply and the walkaway line. Rare in
