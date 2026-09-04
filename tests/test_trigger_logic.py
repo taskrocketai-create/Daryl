@@ -39,7 +39,12 @@ def fresh_state(monkeypatch):
     # never actually touch a real microphone in tests — always report silence
     monkeypatch.setattr(main.conversation, "listen_for_speech", lambda stop_event: None)
 
-    return new_state, spoken
+    yield new_state, spoken
+
+    # stop any background conversation thread this test started, so it
+    # doesn't outlive the monkeypatch and hit the real (unmocked) mic
+    if new_state.conversation_stop_event is not None:
+        new_state.conversation_stop_event.set()
 
 
 def test_no_trigger_when_far_away(fresh_state):
