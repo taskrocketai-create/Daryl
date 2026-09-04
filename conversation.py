@@ -18,6 +18,7 @@ import soundfile as sf
 from openai import OpenAI
 
 import config
+import recent_lines
 
 _client = None
 _dynamic_silence_threshold = None  # set by calibrate_noise_floor(), if called
@@ -144,9 +145,20 @@ def transcribe(audio: np.ndarray):
 
 
 def generate_reply(history: list) -> str:
+    # inject the cross-conversation "don't repeat these" list as an extra
+    # system reminder right before generating — history itself only has
+    # this one conversation's context, it has no idea what's been said to
+    # other people earlier today
+    avoid_block = recent_lines.build_avoid_block()
+    messages = history
+    if avoid_block:
+        messages = history + [{"role": "system", "content": avoid_block.strip()}]
+
     response = _get_client().chat.completions.create(
         model="gpt-4o",
         max_tokens=120,
-        messages=history,
+        messages=messages,
     )
-    return response.choices[0].message.content.strip()
+    reply = response.choices[0].message.content.strip()
+    recent_lines.record(reply)
+    return reply

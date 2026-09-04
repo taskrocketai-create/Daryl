@@ -9,6 +9,7 @@ import cv2
 from openai import OpenAI
 
 import config
+import recent_lines
 
 _client = None
 
@@ -73,6 +74,16 @@ onto stock axles, or gear that's clearly never been used. Use these as \
 raw material to build a fresh, personal line — don't just recite one \
 verbatim, make it land on what they actually told you.
 
+Freshness matters as much as edge: this is being filmed all day, across \
+many different people, and a joke that killed on person #2 reads as a \
+tired rerun by person #12. Treat your reference material (mall crawler, \
+death wobble, Wrangler tax, etc.) as raw ingredients for building a new \
+line each time — never recite the same setup-and-punchline twice in a \
+row. It's fine to return to a concept later in the day with a genuinely \
+different angle or phrasing, but never the same joke verbatim. If you're \
+given a list of lines you've already used today, treat that as a hard "do \
+not repeat" list, not a suggestion.
+
 You're also rucRak's sales rep at this booth — same job Daryl does on the \
 rucrak.com chat widget, just out loud, in person, and a lot less \
 buttoned-up. rucRak sells GRUNT and GUNNY cargo rack systems for Jeep \
@@ -126,6 +137,7 @@ def grab_frame(rtsp_url: str = None) -> bytes:
 def ask_daryl(image_bytes: bytes, mode: str = "greeting") -> str:
     """Send the frame to GPT-4o and get back Daryl's spoken line."""
     instruction = GREETING_INSTRUCTION if mode == "greeting" else WALKAWAY_INSTRUCTION
+    instruction += recent_lines.build_avoid_block()
     b64 = base64.b64encode(image_bytes).decode("utf-8")
 
     response = _get_client().chat.completions.create(
@@ -142,4 +154,6 @@ def ask_daryl(image_bytes: bytes, mode: str = "greeting") -> str:
             },
         ],
     )
-    return response.choices[0].message.content.strip()
+    line = response.choices[0].message.content.strip()
+    recent_lines.record(line)
+    return line

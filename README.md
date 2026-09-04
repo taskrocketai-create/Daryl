@@ -199,6 +199,16 @@ audio overlap between the interrupted reply and the walkaway line. Rare in
 practice, but worth knowing it's not fully guarded against.
 
 ## Known gaps / things to nail down with Jason
+
+**Keeping material fresh across the whole day:** `recent_lines.py` tracks a
+rolling list of Daryl's last 15 generated lines — across *every* visitor,
+not just the current conversation — and feeds them back into every future
+generation as a "don't repeat these" list. Without this, each person's
+interaction has no idea what's already been said to someone else five
+minutes earlier, so the same handful of jokes would otherwise recycle
+constantly over a full show day. This resets when `main.py` restarts,
+which lines up with "fresh material each show" as the reasonable default.
+
 - Line wording in `lines.py` (stall + Bossman lines) is placeholder —
   swap in Jason's actual voice before the first show.
 - `vision.py`'s `DARYL_SYSTEM_PROMPT` sets tone/persona — worth a pass once
