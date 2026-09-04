@@ -1,0 +1,93 @@
+# Daryl Booth Backend
+
+Life-size interactive Daryl for Jeep shows. HC-SR04 is the primary trigger
+(fast, no cloud round-trip); Wyze cams supply the vision frame and content
+capture; GPT-4o writes the line; ElevenLabs speaks it.
+
+## Network / internet uplink
+
+`vision.py` and `voice.py` both call out to the internet (OpenAI, ElevenLabs)
+on every single trigger, so the booth needs *some* reliable WAN connection —
+the GL.iNet router alone only creates a private local bubble for the cams
+and laptop, it doesn't generate its own internet.
+
+**Options, not yet decided:**
+
+- **Starlink (not yet purchased)** — if Jason picks this up, it becomes the
+  WAN uplink and travels with him to every show:
+  ```
+  Starlink dish/router → GL.iNet (WAN-in) → private WiFi bubble → 2x Wyze cams + laptop
+  ```
+  Biggest upside: not dependent on venue WiFi or phone hotspot quality,
+  which is the actual failure point at most outdoor/fairground shows. Also
+  means the `WYZE_RTSP_URL` IP can be pinned with a DHCP reservation on the
+  GL.iNet router and stay stable show to show, since it's the same router
+  every time rather than a different venue network each time.
+  One caveat: consumer Starlink plans typically sit behind CGNAT (no public
+  static IP) unless he's on the static-IP add-on — so the optional IFTTT
+  webhook path (`webhook_server.py`) would still need an ngrok/Cloudflare
+  Tunnel to be externally reachable. Since that path is logging-only and
+  not on the critical trigger path (HC-SR04 handles that), this isn't
+  urgent either way.
+- **Phone hotspot / venue WiFi (fallback, no purchase needed)** — works,
+  but quality varies a lot show to show, and the Wyze cam's local IP isn't
+  guaranteed to stay the same between different networks — re-check
+  `WYZE_RTSP_URL` at every setup if going this route.
+
+Until Starlink is purchased, assume hotspot/venue WiFi and re-verify
+`WYZE_RTSP_URL` each show per the checklist below.
+
+## One-time setup
+
+1. **Wyze cam**: enable RTSP Firmware (Wyze app → camera → Firmware Update →
+   RTSP Firmware beta). Without this the cam only talks to Wyze's cloud and
+   there's no local frame to grab. Note the RTSP URL it gives you.
+2. **Arduino**: install the CH340 driver if this is the Nano's first time
+   plugging into this laptop. Flash `arduino/hcsr04_distance.ino` via the
+   Arduino IDE. Wire per the comments at the top of that file.
+3. **Blue Charm (or similar) iBeacon tag**: configure it with its companion
+   app, note the UUID it broadcasts, put that in `.env`.
+4. **Bluetooth speaker**: pair it and set it as the system's default audio
+   output device *before* running the script.
+5. **ffmpeg**: needs to be installed and on PATH (provides `ffplay` for
+   audio playback).
+6. Copy `.env.example` → `.env`, fill in every value.
+7. `pip install -r requirements.txt`
+
+## Running it
+
+```
+python main.py
+```
+
+Leave it running. It boots three background threads (serial reader, BLE
+scanner, optional webhook listener) and then loops watching distance/mute
+state in `main.py`'s `tick()`.
+
+## Testing before the show
+
+- **Distance/dwell**: walk up to the sensor and watch the console — you
+  should see `[trigger] greeting pipeline firing` after holding still for
+  `DWELL_SECONDS`. Tune `TRIGGER_DISTANCE_CM` and `DWELL_SECONDS` in `.env`
+  to match your actual booth layout.
+- **Walkaway**: after a greeting fires, back away steadily and confirm
+  `[trigger] walkaway pipeline firing` shows up once you clear
+  `WALKAWAY_DELTA_CM` past your closest approach.
+- **Cooldown**: immediately re-approach after a walkaway — Daryl should
+  stay silent until `COOLDOWN_SECONDS` has passed.
+- **Bossman tag**: carry the BLE tag toward Daryl and confirm a joke line
+  fires once, then everything else goes silent until you step away past
+  `BLE_LOST_GRACE_SECONDS`. Walk it in and out repeatedly and confirm the
+  joke line doesn't repeat back-to-back and respects
+  `BOSSMAN_LINE_MIN_INTERVAL_SECONDS`.
+
+## Known gaps / things to nail down with Jason
+
+- Line wording in `lines.py` (stall + Bossman lines) is placeholder —
+  swap in Jason's actual voice before the first show.
+- `vision.py`'s `DARYL_SYSTEM_PROMPT` sets tone/persona — worth a pass once
+  you've heard a few real generated lines.
+- No disclosure/signage logic here — handle that physically at the booth
+  if capturing identifiable faces for social content.
+- `ARDUINO_SERIAL_PORT` and `WYZE_RTSP_URL` are laptop/network specific —
+  confirm both fresh at every show, they can change.
