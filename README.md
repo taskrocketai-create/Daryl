@@ -37,6 +37,55 @@ and laptop, it doesn't generate its own internet.
 Until Starlink is purchased, assume hotspot/venue WiFi and re-verify
 `WYZE_RTSP_URL` each show per the checklist below.
 
+## Testing before the hardware arrives
+
+You don't need the Arduino, HC-SR04, Wyze cams, or the BLE tag in hand to
+test almost all of this. Three layers, in order of how much they cover:
+
+### 1. Logic tests — free, instant, no API keys needed
+```
+pip install -r requirements.txt
+pytest tests/ -v
+```
+Drives the dwell timer, cooldown, walkaway-distance, and Bossman-mute state
+machine directly, with `vision.py`/`voice.py` mocked out. Runs in under two
+seconds. This is what you run after every change to `main.py` or `state.py`
+to make sure the timing logic still behaves — no hardware, no cost, no
+waiting around.
+
+### 2. Simulation mode — tests the real GPT-4o + ElevenLabs pipeline
+Needs real `OPENAI_API_KEY` and `ELEVENLABS_API_KEY` in `.env`, but no
+Arduino/BLE/Wyze cam. Drop any photo of a person into `test_assets/` (see
+`test_assets/README.txt`), then:
+```
+# in .env:
+SIMULATION_MODE=true
+TEST_IMAGE_PATH=test_assets/sample_person.jpg
+
+python main.py
+```
+A `[sim]>` prompt takes over for the Arduino and BLE tag — type a number to
+simulate standing that many cm away, `boss on`/`boss off` for the BLE tag,
+or `auto` to run a scripted approach → linger → walk-away sequence
+hands-free. Everything downstream is real: real GPT-4o call on your test
+photo, real ElevenLabs voice, real audio played through your speakers. This
+is the actual way to sanity-check Daryl's generated lines and tune the
+persona prompt in `vision.py` before there's anything to point a camera at.
+
+### 3. What genuinely needs the physical hardware
+- Whether the HC-SR04's real-world distance readings behave the way the
+  simulated numbers assumed (noise, false reflections, effective range).
+- Wyze RTSP frame grab actually working end-to-end (needs RTSP Firmware
+  enabled — see setup steps above).
+- The Blue Charm BLE tag's actual RSSI values at your chosen distances —
+  `BLE_RSSI_THRESHOLD` in `.env` is a guess until tested against the real
+  tag and real interference at a show floor.
+- Bluetooth speaker audio routing/latency on the actual laptop being used.
+
+Layers 1 and 2 should catch the vast majority of logic and persona issues
+well before any of that — hardware time is best spent confirming physical
+behavior, not debugging code that could've been caught for free.
+
 ## One-time setup
 
 1. **Wyze cam**: enable RTSP Firmware (Wyze app → camera → Firmware Update →

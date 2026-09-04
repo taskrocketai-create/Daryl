@@ -41,3 +41,12 @@ WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "5005"))
 # Bluetooth speaker should be paired and set as the system's default output
 # device — this just plays through whatever that is via ffplay.
 AUDIO_TEMP_DIR = os.getenv("AUDIO_TEMP_DIR", "/tmp/daryl_audio")
+
+# --- Simulation mode (no hardware needed) ---
+# When true: distance + Bossman presence come from your keyboard instead of
+# the Arduino/BLE, and vision.py reads a local photo instead of the Wyze
+# RTSP stream. Everything else (GPT-4o, ElevenLabs) runs for real, so this
+# is the way to test the actual pipeline before any hardware shows up.
+SIMULATION_MODE = os.getenv("SIMULATION_MODE", "false").lower() == "true"
+TEST_IMAGE_PATH = os.getenv("TEST_IMAGE_PATH", "test_assets/sample_person.jpg")
+

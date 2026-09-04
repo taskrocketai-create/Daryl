@@ -51,7 +51,13 @@ WALKAWAY_INSTRUCTION = (
 
 
 def grab_frame(rtsp_url: str = None) -> bytes:
-    """Grab a single JPEG frame from the Wyze RTSP stream."""
+    """Grab a single JPEG frame. In simulation mode, reads a local test
+    photo instead of the Wyze RTSP stream — same downstream code path,
+    no camera required."""
+    if config.SIMULATION_MODE:
+        with open(config.TEST_IMAGE_PATH, "rb") as f:
+            return f.read()
+
     url = rtsp_url or config.WYZE_RTSP_URL
     cap = cv2.VideoCapture(url)
     try:

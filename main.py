@@ -103,8 +103,15 @@ def tick():
 
 def main():
     print("[daryl] booting up...")
-    serial_reader.start_thread()
-    ble_presence.start_thread()
+
+    if config.SIMULATION_MODE:
+        print("[daryl] SIMULATION MODE — no Arduino/BLE/Wyze required.")
+        import sim.fake_hardware as fake_hardware
+        fake_hardware.start_thread()
+    else:
+        serial_reader.start_thread()
+        ble_presence.start_thread()
+
     webhook_server.start_thread()
     print("[daryl] all systems running. Waiting for someone to walk up...")
 
