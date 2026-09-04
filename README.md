@@ -217,3 +217,30 @@ which lines up with "fresh material each show" as the reasonable default.
   if capturing identifiable faces for social content.
 - `ARDUINO_SERIAL_PORT` and `WYZE_RTSP_URL` are laptop/network specific —
   confirm both fresh at every show, they can change.
+
+## One-click startup at the show (Windows)
+
+Once everything's physically set up and powered — Arduino connected, Wyze
+cams on the network, Bluetooth speaker paired, mic plugged in — Jason
+shouldn't need Command Prompt at all. Set this up **once**, ahead of time:
+
+1. Right-click **`start_daryl.bat`** in the `Daryl` folder → **Send to** →
+   **Desktop (create shortcut)**
+2. On the Desktop, rename the new shortcut to something obvious like
+   **"Start Daryl"**
+3. (Optional) Right-click the shortcut → **Properties** → **Change Icon** to
+   make it easier to spot at a glance
+
+**At the show, starting Daryl is then just:** double-click that desktop
+shortcut. It will:
+- Check `.env` exists and give a plain-English message (not a Python
+  error) if it's missing
+- Run the noise-floor calibration and boot everything automatically
+- **Auto-restart itself if it crashes** (bad frame grab, API hiccup, mic
+  error) after a 5-second pause — no need to notice and manually restart
+  mid-show
+- Stay stopped for good only if the window itself is closed
+
+Worth testing this shortcut once before the actual show, not for the
+first time on-site — confirm it launches cleanly and finds `.env` from
+wherever the shortcut actually lives.
