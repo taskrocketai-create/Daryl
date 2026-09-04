@@ -172,6 +172,11 @@ def main():
         ble_presence.start_thread()
 
     webhook_server.start_thread()
+
+    # measure the real ambient noise level before going live — matters a
+    # lot more at a loud show floor than it does testing at home
+    conversation.calibrate_noise_floor()
+
     print("[daryl] all systems running. Waiting for someone to walk up...")
 
     try:

@@ -149,14 +149,37 @@ the mic and actually listens. The flow per interaction:
    away, which **interrupts the conversation immediately** (even mid-reply-
    generation) and hands off to the walkaway line instead
 
-**Tuning note:** `SILENCE_RMS_THRESHOLD` and `SILENCE_DURATION_SECONDS` in
-`.env` control how sensitive the silence detection is — these are starting
-guesses, not calibrated values. Too low a threshold and background booth
-noise never lets Daryl think the person's done talking; too high and he
-never notices they've started. This genuinely needs tuning against a real
-mic in a real noisy environment — simulation mode still uses your actual
-microphone (only distance/BLE/camera are faked), so this is testable now,
-just expect to adjust the numbers once you hear it misfire.
+**Tuning note:** `SILENCE_RMS_THRESHOLD` in `.env` is only a fallback. On
+every real startup, `main.py` runs `conversation.calibrate_noise_floor()` —
+records a few seconds of actual ambient sound and sets the real threshold
+relative to that measurement, rather than trusting a fixed guess. This
+matters a lot more than it sounds: a flat threshold has no idea whether
+it's sitting in a quiet room or next to a generator and a PA system, so
+**always let this calibration run at the actual show floor**, not just at
+home — a quiet house isn't representative of Jeep-show background noise.
+
+**Noise/hallucination filtering:** Whisper has a known tendency to produce
+short phantom transcriptions (like "Thank you.") from pure background
+noise with no real speech in it. `transcribe()` filters these two ways:
+Whisper's own `no_speech_prob` confidence signal per segment (rejects if
+Whisper itself thinks a clip was mostly non-speech), plus a small blocklist
+of known hallucinated stock phrases. Tune `MAX_NO_SPEECH_PROB` in `.env` if
+real speech is getting rejected as noise (raise the value, more permissive)
+or noise is still getting through as fake "replies" (lower it, stricter).
+
+**Biggest lever that's outside this code entirely: microphone choice.** An
+omnidirectional USB mic will pick up the whole booth's ambient noise
+indiscriminately, no amount of software filtering fully compensates for
+that. A **directional/cardioid mic** (or a small shotgun mic) mounted to
+pick up specifically the zone where someone stands to talk to Daryl, aimed
+away from the main crowd/music/engine noise, is the single highest-leverage
+fix here — worth prioritizing over further silence-detection tuning.
+
+**One thing that's already handled, not a new concern:** since `voice.speak()`
+runs blocking during Daryl's own lines, the mic never records while he's
+mid-sentence — so there's no risk of him hearing and reacting to his own
+voice through the booth speaker. Listening only starts after he's done
+talking, by construction.
 
 **Known limitation:** if walkaway triggers at the exact moment Daryl is
 mid-way through generating or speaking a reply, there's a small chance of

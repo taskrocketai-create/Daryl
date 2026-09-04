@@ -51,15 +51,28 @@ SIMULATION_MODE = os.getenv("SIMULATION_MODE", "false").lower() == "true"
 TEST_IMAGE_PATH = os.getenv("TEST_IMAGE_PATH", "test_assets/sample_person.jpg")
 
 # --- Conversation (mic listening, after the greeting line) ---
-# SILENCE_RMS_THRESHOLD is the least "known good" value here — it depends
-# entirely on your actual microphone and booth noise floor. Start with this,
-# then tune after hearing whether Daryl cuts people off mid-sentence
-# (threshold too low / silence duration too short) or waits too long after
-# they're done talking (threshold too high / silence duration too long).
+# SILENCE_RMS_THRESHOLD is a FALLBACK only — see calibrate_noise_floor() in
+# conversation.py, which measures the actual ambient noise at startup and
+# sets a real threshold from that instead of relying on this fixed guess.
 MIC_SAMPLE_RATE = int(os.getenv("MIC_SAMPLE_RATE", "16000"))
 MIC_CHUNK_MS = int(os.getenv("MIC_CHUNK_MS", "100"))
 SILENCE_RMS_THRESHOLD = float(os.getenv("SILENCE_RMS_THRESHOLD", "500"))
 SILENCE_DURATION_SECONDS = float(os.getenv("SILENCE_DURATION_SECONDS", "1.2"))
 MAX_LISTEN_SECONDS = float(os.getenv("MAX_LISTEN_SECONDS", "8"))
+
+# --- Noise floor calibration ---
+# At startup, records this many seconds of ambient sound and sets the real
+# silence threshold to (measured ambient RMS x multiplier), so a loud show
+# floor doesn't get mistaken for someone talking. Run this at the actual
+# venue, not at home — a quiet house doesn't represent a Jeep show.
+NOISE_CALIBRATION_SECONDS = float(os.getenv("NOISE_CALIBRATION_SECONDS", "3"))
+NOISE_THRESHOLD_MULTIPLIER = float(os.getenv("NOISE_THRESHOLD_MULTIPLIER", "2.5"))
+
+# --- Whisper noise/hallucination filtering ---
+# Whisper has a known tendency to hallucinate short stock phrases (e.g.
+# "Thank you.") out of pure background noise with no actual speech. These
+# filters reject those before they're treated as a real reply.
+MAX_NO_SPEECH_PROB = float(os.getenv("MAX_NO_SPEECH_PROB", "0.6"))
+MIN_TRANSCRIPT_CHARS = int(os.getenv("MIN_TRANSCRIPT_CHARS", "2"))
 
 
