@@ -187,9 +187,8 @@ def main():
     print("[daryl] all systems running. Waiting for someone to walk up...")
     print()
     print("=" * 60)
-    print("   DARYL IS READY.")
+    print("   DARYL IS READY, JASON.")
     print("   GET THE FUCK OUT THERE AND MAKE THIS SHIT HAPPEN.")
-    print("   THIS IS WHAT YOU BUILT THIS FOR.")
     print("=" * 60)
     print()
 
