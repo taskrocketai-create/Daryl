@@ -150,9 +150,26 @@ def generate_reply(history: list) -> str:
     # this one conversation's context, it has no idea what's been said to
     # other people earlier today
     avoid_block = recent_lines.build_avoid_block()
-    messages = history
-    if avoid_block:
-        messages = history + [{"role": "system", "content": avoid_block.strip()}]
+
+    # explicit turn-stage guidance, reinforcing the escalate-then-close
+    # pattern from the persona rather than leaving turn-counting purely to
+    # the model's own inference from history
+    user_turns = sum(1 for m in history if m.get("role") == "user")
+    if user_turns <= 2:
+        stage_note = (
+            f"This is exchange {user_turns} of them talking back to you — "
+            "they engaged, so escalate the roast/bit a notch. Don't pivot "
+            "to the sales close yet."
+        )
+    else:
+        stage_note = (
+            f"This is exchange {user_turns} — you've escalated enough. "
+            "Pivot now: stop roasting, close by pulling them into the "
+            "booth to see the racks in person."
+        )
+
+    extra = stage_note + avoid_block
+    messages = history + [{"role": "system", "content": extra}]
 
     response = _get_client().chat.completions.create(
         model="gpt-4o",

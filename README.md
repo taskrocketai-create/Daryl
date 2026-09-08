@@ -200,6 +200,18 @@ practice, but worth knowing it's not fully guarded against.
 
 ## Known gaps / things to nail down with Jason
 
+**Escalate-then-close pattern:** Daryl's positioned at the front of the
+booth to pull foot traffic in — the roast is the hook, not the whole
+interaction. `conversation.py` counts how many times the person has
+actually talked back and injects an explicit stage instruction: exchanges
+1-2 escalate the roast/bit, exchange 3+ pivots hard into closing — stop
+roasting, start pulling them into the booth to see the racks. This is
+reinforced two ways: baked into the persona in `vision.py` so it reads
+naturally, and enforced with an explicit turn count in `conversation.py`
+so it's reliable rather than left purely to the model inferring pacing
+from context.
+
+
 **Keeping material fresh across the whole day:** `recent_lines.py` tracks a
 rolling list of Daryl's last 15 generated lines — across *every* visitor,
 not just the current conversation — and feeds them back into every future
