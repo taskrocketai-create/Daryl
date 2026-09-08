@@ -186,10 +186,11 @@ def main():
 
     print("[daryl] all systems running. Waiting for someone to walk up...")
     print()
-    print("=" * 50)
-    print("   DARYL IS READY")
-    print("   You're good to walk away from the laptop now.")
-    print("=" * 50)
+    print("=" * 60)
+    print("   DARYL IS READY.")
+    print("   GET THE FUCK OUT THERE AND MAKE THIS SHIT HAPPEN.")
+    print("   THIS IS WHAT YOU BUILT THIS FOR.")
+    print("=" * 60)
     print()
 
     try:
