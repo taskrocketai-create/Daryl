@@ -6,12 +6,19 @@ This just gives IFTTT/Wyze motion events somewhere to land for logging and
 future use (e.g. content-capture timestamps), without gating any of the
 actual greeting logic. Safe to ignore/leave running in the background.
 """
+import logging
 import threading
 from flask import Flask, request
 
 import config
 
 app = Flask(__name__)
+
+# Quiet Flask/Werkzeug's default startup banner and per-request logging —
+# this runs in the background as a non-critical logging endpoint, and its
+# normal console output ("Serving Flask app...", "Running on...") reads
+# like a possible error to someone who isn't expecting to see it.
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 
 @app.route("/wyze-motion", methods=["POST"])

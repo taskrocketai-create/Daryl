@@ -185,6 +185,12 @@ def main():
     visitor_memory.reset()
 
     print("[daryl] all systems running. Waiting for someone to walk up...")
+    print()
+    print("=" * 50)
+    print("   DARYL IS READY")
+    print("   You're good to walk away from the laptop now.")
+    print("=" * 50)
+    print()
 
     try:
         while True:
