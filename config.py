@@ -75,4 +75,13 @@ NOISE_THRESHOLD_MULTIPLIER = float(os.getenv("NOISE_THRESHOLD_MULTIPLIER", "2.5"
 MAX_NO_SPEECH_PROB = float(os.getenv("MAX_NO_SPEECH_PROB", "0.6"))
 MIN_TRANSCRIPT_CHARS = int(os.getenv("MIN_TRANSCRIPT_CHARS", "2"))
 
+# --- Same-day visitor memory (repeat-visitor detection) ---
+# Same-day, in-memory only — wiped every time main.py restarts. Never
+# written to disk. LBPH confidence: LOWER = more similar. These thresholds
+# are starting guesses and WILL need tuning against real booth lighting —
+# test this deliberately rather than trusting the defaults.
+ENABLE_VISITOR_MEMORY = os.getenv("ENABLE_VISITOR_MEMORY", "true").lower() == "true"
+FACE_MATCH_CONFIDENT_THRESHOLD = float(os.getenv("FACE_MATCH_CONFIDENT_THRESHOLD", "55"))
+FACE_MATCH_UNCERTAIN_THRESHOLD = float(os.getenv("FACE_MATCH_UNCERTAIN_THRESHOLD", "85"))
+
 

@@ -27,6 +27,7 @@ import webhook_server
 import vision
 import voice
 import conversation
+import visitor_memory
 from lines import STALL_LINES, BOSSMAN_LINES, WALKAWAY_FALLBACK_LINES, get_random_no_repeat
 
 
@@ -95,7 +96,8 @@ def run_greeting_pipeline(distance_cm: float):
 
     try:
         frame = vision.grab_frame()
-        line = vision.ask_daryl(frame, mode="greeting")
+        visitor_status = visitor_memory.check_and_record(frame)
+        line = vision.ask_daryl(frame, mode="greeting", visitor_status=visitor_status)
     except Exception as e:
         print(f"[vision] greeting generation failed: {e}")
         line = "Well hey there. Come on over."
@@ -176,6 +178,11 @@ def main():
     # measure the real ambient noise level before going live — matters a
     # lot more at a loud show floor than it does testing at home
     conversation.calibrate_noise_floor()
+
+    # fresh same-day visitor memory every time the program starts — this
+    # is intentional, not a bug: repeat-visitor detection only ever
+    # applies within a single running session
+    visitor_memory.reset()
 
     print("[daryl] all systems running. Waiting for someone to walk up...")
 

@@ -182,10 +182,28 @@ def grab_frame(rtsp_url: str = None) -> bytes:
         cap.release()
 
 
-def ask_daryl(image_bytes: bytes, mode: str = "greeting") -> str:
-    """Send the frame to GPT-4o and get back Daryl's spoken line."""
+def ask_daryl(image_bytes: bytes, mode: str = "greeting", visitor_status: str = "new") -> str:
+    """Send the frame to GPT-4o and get back Daryl's spoken line.
+    visitor_status: 'new', 'maybe', or 'confident' — from visitor_memory.py.
+    """
     instruction = GREETING_INSTRUCTION if mode == "greeting" else WALKAWAY_INSTRUCTION
     instruction += recent_lines.build_avoid_block()
+
+    if visitor_status == "confident":
+        instruction += (
+            "\n\nYou're fairly sure you've seen this exact person earlier "
+            "today. Play off it naturally — welcome them back with some "
+            "kind of callback energy, like you remember them."
+        )
+    elif visitor_status == "maybe":
+        instruction += (
+            "\n\nYou have a hunch — not certainty — that you might've seen "
+            "this person earlier today. Play it as a genuine guess: ask "
+            "them straight up, playfully, something like \"weren't you "
+            "just here?\" and react naturally to whatever they say. Don't "
+            "claim certainty you don't have."
+        )
+
     b64 = base64.b64encode(image_bytes).decode("utf-8")
 
     response = _get_client().chat.completions.create(

@@ -35,9 +35,12 @@ def fresh_state(monkeypatch):
     spoken = []
     monkeypatch.setattr(main.voice, "speak", lambda text, blocking=True: spoken.append(text))
     monkeypatch.setattr(main.vision, "grab_frame", lambda: b"fake-jpeg-bytes")
-    monkeypatch.setattr(main.vision, "ask_daryl", lambda frame, mode: f"[{mode} line]")
+    monkeypatch.setattr(main.vision, "ask_daryl", lambda frame, mode, visitor_status="new": f"[{mode} line]")
     # never actually touch a real microphone in tests — always report silence
     monkeypatch.setattr(main.conversation, "listen_for_speech", lambda stop_event: None)
+    # skip real face-matching in tests — irrelevant to trigger-logic tests
+    # and would otherwise run real OpenCV work on every greeting call
+    monkeypatch.setattr(main.visitor_memory, "check_and_record", lambda frame: "new")
 
     yield new_state, spoken
 

@@ -200,6 +200,55 @@ practice, but worth knowing it's not fully guarded against.
 
 ## Known gaps / things to nail down with Jason
 
+**Same-day visitor memory (repeat-visitor detection):** `visitor_memory.py`
+notices if someone's probably already visited the booth today, using
+OpenCV's built-in LBPH face recognizer — deliberately in-memory only,
+never written to disk, and fully wiped every time `main.py` restarts.
+Three outcomes feed into the greeting line via `vision.ask_daryl()`'s
+`visitor_status` parameter:
+- `'new'` — no meaningful match, normal fresh greeting
+- `'maybe'` — a weak/ambiguous match. Rather than guessing silently,
+  Daryl plays it as a genuine question — something like "weren't you just
+  here?" — and reacts to whatever the person actually says. This turns
+  the system's uncertainty into content instead of hiding it.
+- `'confident'` — strong match. Daryl plays off it naturally, welcoming
+  them back.
+
+**Legal note (checked for NC, SC, GA, FL, VA, MS, UT specifically):** none
+of these states have anything like Illinois' BIPA (private right of
+action, no revenue threshold). VA/FL/UT do have comprehensive privacy laws
+that treat biometric data as sensitive, but all three only kick in at
+scale (100,000+ consumers, or in FL's case $1B+ revenue) that a single
+booth's foot traffic won't approach. NC has a bill pending but nothing
+enacted as of this writing. **Worth a fresh check if a show ever lands
+somewhere outside this list, or if pending state bills pass** — this
+isn't a permanent green light, it's current-as-of-now for these specific
+states.
+
+**Why LBPH instead of a heavier face-recognition library:** libraries like
+`face_recognition` (dlib-based) need a CMake/Visual-Studio-Build-Tools
+compile step that's genuinely painful on Windows, especially on a newer
+Python version that might not have prebuilt wheels yet. OpenCV's built-in
+LBPH recognizer is meaningfully less precise, but that's an acceptable
+tradeoff here — false positives just mean an occasional "weren't you just
+here?" asked to a genuinely new person (harmless, kind of funny even),
+and false negatives just mean no callback happens. Neither failure mode
+is a real problem given the fallback design.
+
+**Tuning note:** `FACE_MATCH_CONFIDENT_THRESHOLD` and
+`FACE_MATCH_UNCERTAIN_THRESHOLD` in `.env` are starting guesses — LBPH
+confidence scores are sensitive to lighting and angle, and booth lighting
+will differ a lot from wherever this gets tested first. Test deliberately
+once the camera's in its final position, the same way the noise-floor
+calibration needs a real venue test.
+
+**Note on the bundled cascade file:** `data/haarcascade_frontalface_default.xml`
+is checked directly into the repo rather than relying on
+`cv2.data.haarcascades` — confirmed some OpenCV builds (opencv-contrib-python
+5.0.0 specifically) don't ship this file at all, which would silently break
+face detection on a fresh install. Bundling it removes that fragility.
+
+
 **Escalate-then-close pattern:** Daryl's positioned at the front of the
 booth to pull foot traffic in — the roast is the hook, not the whole
 interaction. `conversation.py` counts how many times the person has
